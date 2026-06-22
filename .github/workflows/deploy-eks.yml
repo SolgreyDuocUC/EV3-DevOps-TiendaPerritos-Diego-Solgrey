@@ -1,132 +1,168 @@
-name: CI/CD Tienda Perritos EKS
+name: CI/CD Tienda Perritos - EKS
 
+# Disparadores: push a main o ejecucion manual desde GitHub
 on:
   push:
     branches: [ main ]
   workflow_dispatch: {}
 
+# Variables globales (no son secretos, solo nombres de repos ECR)
 env:
-  # Repos de ECR (no son secretos, solo nombres)
   ECR_REPO_FRONTEND: tienda-frontend
-  ECR_REPO_BACKEND: tienda-backend
-  ECR_REPO_DB: tienda-db
+  ECR_REPO_BACKEND:  tienda-backend
+  ECR_REPO_DB:       tienda-db
+  EKS_NAMESPACE:     ${{ secrets.EKS_NAMESPACE }}
 
 jobs:
-  build-and-deploy:
+
+  # ============================================================
+  # JOB 1: Construir y publicar imagenes en Amazon ECR
+  # ============================================================
+  build:
+    name: Build y Push a ECR
     runs-on: ubuntu-latest
 
+    outputs:
+      image_tag:    ${{ steps.set-tag.outputs.image_tag }}
+      ecr_registry: ${{ steps.login-ecr.outputs.registry }}
+
     steps:
-      - name: Checkout código
+      - name: Checkout del repositorio
         uses: actions/checkout@v4
 
       - name: Configurar credenciales AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
 
       - name: Login a Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Definir tag de imagen
-        run: echo "IMAGE_TAG=${GITHUB_SHA::7}" >> $GITHUB_ENV
+      - name: Definir tag de imagen (SHA corto del commit)
+        id: set-tag
+        run: |
+          TAG=${GITHUB_SHA::7}
+          echo "IMAGE_TAG=${TAG}" >> $GITHUB_ENV
+          echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
 
       # ---------- FRONTEND ----------
-      - name: Build & push FRONTEND
+      - name: Build y push FRONTEND
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          cd frontend
-          docker build -t $ECR_REGISTRY/${ECR_REPO_FRONTEND}:${IMAGE_TAG} .
-          docker push $ECR_REGISTRY/${ECR_REPO_FRONTEND}:${IMAGE_TAG}
+          docker build -t $ECR_REGISTRY/$ECR_REPO_FRONTEND:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/$ECR_REPO_FRONTEND:latest \
+                       ./frontend
+          docker push $ECR_REGISTRY/$ECR_REPO_FRONTEND:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPO_FRONTEND:latest
 
       # ---------- BACKEND ----------
-      - name: Build & push BACKEND
+      - name: Build y push BACKEND
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          cd backend
-          docker build -t $ECR_REGISTRY/${ECR_REPO_BACKEND}:${IMAGE_TAG} .
-          docker push $ECR_REGISTRY/${ECR_REPO_BACKEND}:${IMAGE_TAG}
+          docker build -t $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/$ECR_REPO_BACKEND:latest \
+                       ./backend
+          docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:latest
 
-      # ---------- DB (opcional) ----------
-      - name: Build & push DB
+      # ---------- DB ----------
+      - name: Build y push DB
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          cd db
-          docker build -t $ECR_REGISTRY/${ECR_REPO_DB}:${IMAGE_TAG} .
-          docker push $ECR_REGISTRY/${ECR_REPO_DB}:${IMAGE_TAG}
+          docker build -t $ECR_REGISTRY/$ECR_REPO_DB:$IMAGE_TAG \
+                       -t $ECR_REGISTRY/$ECR_REPO_DB:latest \
+                       ./db
+          docker push $ECR_REGISTRY/$ECR_REPO_DB:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPO_DB:latest
 
-      # ---------- Instalar kubectl ----------
+  # ============================================================
+  # JOB 2: Desplegar en el cluster EKS
+  # Depende de que el job build haya terminado exitosamente.
+  # ============================================================
+  deploy:
+    name: Despliegue en EKS
+    runs-on: ubuntu-latest
+    needs: build
+
+    env:
+      IMAGE_TAG:    ${{ needs.build.outputs.image_tag }}
+      ECR_REGISTRY: ${{ needs.build.outputs.ecr_registry }}
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar credenciales AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION }}
+          aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
+
       - name: Instalar kubectl
         uses: azure/setup-kubectl@v4
         with:
           version: v1.29.0
 
-      # ---------- Configurar kubeconfig de EKS ----------
       - name: Configurar kubeconfig para EKS
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          EKS_CLUSTER_NAME: ${{ secrets.EKS_CLUSTER_NAME }}
         run: |
           aws eks update-kubeconfig \
-            --region $AWS_REGION \
-            --name $EKS_CLUSTER_NAME
+            --region ${{ secrets.AWS_REGION }} \
+            --name   ${{ secrets.EKS_CLUSTER_NAME }}
           kubectl config current-context
 
-      # ---------- Aplicar manifests base ----------
-      - name: Aplicar manifests base (namespace, DB, servicios)
-        env:
-          EKS_NAMESPACE: ${{ secrets.EKS_NAMESPACE }}
+      # ---------- Infraestructura base ----------
+      - name: Aplicar namespace y recursos de base de datos
         run: |
           kubectl apply -f k8s/namespace.yaml
-          kubectl apply -f k8s/mysql-secret.yaml -n $EKS_NAMESPACE
+          kubectl apply -f k8s/mysql-secret.yaml    -n $EKS_NAMESPACE
           kubectl apply -f k8s/mysql-deployment.yaml -n $EKS_NAMESPACE
-          kubectl apply -f k8s/mysql-service.yaml -n $EKS_NAMESPACE
+          kubectl apply -f k8s/mysql-service.yaml    -n $EKS_NAMESPACE
 
-      # ---------- Actualizar BACKEND en EKS ----------
-      - name: Actualizar BACKEND en EKS
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          EKS_NAMESPACE: ${{ secrets.EKS_NAMESPACE }}
+      # ---------- Backend ----------
+      - name: Desplegar y actualizar BACKEND
         run: |
           kubectl apply -f k8s/backend-deployment.yaml -n $EKS_NAMESPACE
-          kubectl apply -f k8s/backend-service.yaml -n $EKS_NAMESPACE
+          kubectl apply -f k8s/backend-service.yaml    -n $EKS_NAMESPACE
           kubectl set image deployment/tienda-backend \
-            backend=$ECR_REGISTRY/${ECR_REPO_BACKEND}:${IMAGE_TAG} \
+            backend=$ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG \
             -n $EKS_NAMESPACE
-          kubectl rollout status deployment/tienda-backend -n $EKS_NAMESPACE
+          kubectl rollout status deployment/tienda-backend \
+            -n $EKS_NAMESPACE --timeout=120s
 
-      # ---------- Actualizar FRONTEND en EKS ----------
-      - name: Actualizar FRONTEND en EKS
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          EKS_NAMESPACE: ${{ secrets.EKS_NAMESPACE }}
+      # ---------- Frontend ----------
+      - name: Desplegar y actualizar FRONTEND
         run: |
           kubectl apply -f k8s/frontend-deployment.yaml -n $EKS_NAMESPACE
-          kubectl apply -f k8s/frontend-service.yaml -n $EKS_NAMESPACE
+          kubectl apply -f k8s/frontend-service.yaml    -n $EKS_NAMESPACE
           kubectl set image deployment/tienda-frontend \
-            frontend=$ECR_REGISTRY/${ECR_REPO_FRONTEND}:${IMAGE_TAG} \
+            frontend=$ECR_REGISTRY/$ECR_REPO_FRONTEND:$IMAGE_TAG \
             -n $EKS_NAMESPACE
-          kubectl rollout status deployment/tienda-frontend -n $EKS_NAMESPACE
+          kubectl rollout status deployment/tienda-frontend \
+            -n $EKS_NAMESPACE --timeout=120s
 
-      # ---------- HPA (si existen los YAML) ----------
-      - name: Aplicar HPA (opcional)
-        env:
-          EKS_NAMESPACE: ${{ secrets.EKS_NAMESPACE }}
+      # ---------- HPA ----------
+      - name: Aplicar Horizontal Pod Autoscaler
         run: |
-          if [ -f k8s/backend-hpa.yaml ]; then kubectl apply -f k8s/backend-hpa.yaml -n $EKS_NAMESPACE; fi
-          if [ -f k8s/frontend-hpa.yaml ]; then kubectl apply -f k8s/frontend-hpa.yaml -n $EKS_NAMESPACE; fi
+          kubectl apply -f k8s/backend-hpa.yaml  -n $EKS_NAMESPACE
+          kubectl apply -f k8s/frontend-hpa.yaml -n $EKS_NAMESPACE
 
-      # ---------- Ver estado final ----------
-      - name: Ver pods y servicios
-        env:
-          EKS_NAMESPACE: ${{ secrets.EKS_NAMESPACE }}
+      # ---------- Estado final ----------
+      - name: Verificar estado del cluster
         run: |
+          echo "--- Pods ---"
           kubectl get pods -n $EKS_NAMESPACE
-          kubectl get svc -n $EKS_NAMESPACE
-          kubectl get hpa -n $EKS_NAMESPACE || true
+          echo "--- Servicios ---"
+          kubectl get svc  -n $EKS_NAMESPACE
+          echo "--- HPA ---"
+          kubectl get hpa  -n $EKS_NAMESPACE || true
+          echo "--- Deployments ---"
+          kubectl get deploy -n $EKS_NAMESPACE
