@@ -1,0 +1,88 @@
+version: "3.9"
+
+# ==============================================================
+# Tienda Perritos - Entorno Local con Docker Compose
+# Uso: docker compose up --build
+# ==============================================================
+
+services:
+
+  # ----------------------------------------------------------------
+  # Base de datos MySQL 8
+  # ----------------------------------------------------------------
+  db:
+    build:
+      context: ./db
+      dockerfile: Dockerfile
+    container_name: tienda-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_DATABASE: tienda_perritos
+      MYSQL_USER: alumno
+      MYSQL_PASSWORD: alumno123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - tienda-net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-padmin123"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ----------------------------------------------------------------
+  # Backend Node.js / Express
+  # ----------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tienda-backend
+    restart: unless-stopped
+    environment:
+      PORT: 3001
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: admin123
+      DB_NAME: tienda_perritos
+      DB_PORT: 3306
+    ports:
+      - "3001:3001"
+    networks:
+      - tienda-net
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ----------------------------------------------------------------
+  # Frontend Nginx (HTML / JS estatico)
+  # ----------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: tienda-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    networks:
+      - tienda-net
+    depends_on:
+      - backend
+
+# ----------------------------------------------------------------
+# Volumen persistente para MySQL
+# ----------------------------------------------------------------
+volumes:
+  mysql_data:
+
+# ----------------------------------------------------------------
+# Red interna compartida entre servicios
+# ----------------------------------------------------------------
+networks:
+  tienda-net:
+    driver: bridge

@@ -2,219 +2,286 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Tienda de Alimentos para Perritos 🐶</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tienda de Alimentos para Perritos 🐶</title>
   
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <style>
-    /* --- VARIABLES DE DISEÑO (Para fácil mantenimiento de colores) --- */
+    /* --- VARIABLES DE DISEÑO (Azul Premium & Estilo UI Moderno) --- */
     :root {
-      --primary-color: #2563eb;     /* Azul principal */
-      --primary-hover: #1d4ed8;     /* Azul oscuro para hover */
-      --secondary-color: #4b5563;   /* Gris secundario */
-      --secondary-hover: #374151;   /* Gris oscuro para hover */
-      --danger-color: #dc2626;      /* Rojo para acciones destructivas */
-      --danger-hover: #b91c1c;     /* Rojo oscuro para hover */
-      --success-color: #16a34a;     /* Verde para mensajes de éxito */
-      --bg-body: #f8fafc;           /* Fondo general claro de la app */
-      --bg-card: #ffffff;           /* Fondo de los contenedores blancos */
-      --text-main: #1e293b;         /* Color principal del texto */
-      --border-color: #e2e8f0;      /* Gris suave para bordes y líneas */
+      --primary: #2563eb;           /* Azul vibrante principal */
+      --primary-hover: #1d4ed8;     /* Azul profundo */
+      --primary-light: #eff6ff;     /* Fondo azul sutil */
+      --secondary: #64748b;
+      --secondary-hover: #475569;
+      --danger: #df2c2c;
+      --danger-light: #fdf2f2;
+      --success: #16a34a;
+      --success-light: #f0fdf4;
+      
+      --bg-body: #f1f5f9;           /* Gris ultra claro de fondo */
+      --bg-card: #ffffff;
+      --text-main: #0f172a;         /* Texto casi negro para contraste */
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+      
+      /* Radios de curvatura al estilo del banner de referencia */
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 24px; 
+      
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.05);
+      --shadow-md: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+      --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    /* --- ESTILOS GENERALES Y RESETEO --- */
+    /* --- RESET & BASE --- */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       margin: 0;
       padding: 0;
       background-color: var(--bg-body);
       color: var(--text-main);
       line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* --- ENCABEZADO (HEADER) --- */
+    /* --- HEADER (Estilo barra de navegación limpia) --- */
     header {
-      background: linear-gradient(135deg, var(--primary-color), #3b82f6);
+      background: linear-gradient(135deg, #1e40af, var(--primary));
       color: white;
-      padding: 30px 20px;
+      padding: 35px 24px;
       text-align: center;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      box-shadow: var(--shadow-sm);
     }
 
     header h1 {
-      margin: 0 0 8px 0;
+      margin: 0 0 6px 0;
       font-size: 2.2rem;
-      font-weight: 700;
+      font-weight: 800;
+      letter-spacing: -0.03em;
     }
 
     header p {
       margin: 0;
-      opacity: 0.9;
+      opacity: 0.85;
       font-size: 1rem;
+      font-weight: 500;
     }
 
-    /* --- CONTENEDOR PRINCIPAL (MAIN) --- */
+    header code {
+      background: rgba(255, 255, 255, 0.15);
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
+
+    /* --- CONTENEDOR PRINCIPAL DISPUESTO EN REJILLA --- */
     main {
-      max-width: 1100px;
-      margin: 30px auto;
-      padding: 0 20px;
-      display: flex;
-      flex-direction: column;
-      gap: 30px; /* Separación elegante entre secciones */
+      max-width: 1280px;
+      margin: 40px auto;
+      padding: 0 24px;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 32px;
     }
 
-    /* --- TARJETAS / SECCIONES (CARDS) --- */
+    @media (min-width: 1024px) {
+      main {
+        grid-template-columns: 1.5fr 1fr;
+        align-items: start;
+      }
+    }
+
+    /* --- TARJETAS ESTILO E-COMMERCE (Bordes muy redondeados) --- */
     section {
       background: var(--bg-card);
-      padding: 24px;
-      border-radius: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-      border: 1px solid var(--border-color);
+      padding: 32px;
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(226, 232, 240, 0.8);
     }
 
     section h2 {
       margin-top: 0;
-      margin-bottom: 20px;
+      margin-bottom: 24px;
       font-size: 1.4rem;
-      color: #0f172a;
-      border-bottom: 2px solid var(--border-color);
-      padding-bottom: 8px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
 
-    /* --- COMPONENTES de BOTONES --- */
-    .actions {
-      margin-bottom: 16px;
+    /* --- BOTONES ESTILO PILL/RELAJADO --- */
+    .btn-group {
       display: flex;
-      gap: 8px;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
     }
 
     button {
-      padding: 10px 18px;
-      font-size: 0.95rem;
-      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      font-size: 0.9rem;
+      font-weight: 600;
       border: none;
-      border-radius: 6px;
+      border-radius: 9999px; /* Botones completamente ovalados estilo la app de ref */
       cursor: pointer;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-      background-color: var(--primary-color);
+      transition: var(--transition);
+      background-color: var(--primary);
       color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
     }
 
     button:hover {
       background-color: var(--primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.3);
     }
 
     button:active {
-      transform: scale(0.98);
+      transform: translateY(0);
     }
 
+    /* Botón Secundario Cancele/Borde */
     button.secondary {
-      background-color: var(--secondary-color);
+      background-color: #ffffff;
+      color: var(--secondary);
+      border: 1px solid var(--border-color);
+      box-shadow: none;
     }
     button.secondary:hover {
-      background-color: var(--secondary-hover);
+      background-color: var(--primary-light);
+      color: var(--primary);
+      border-color: transparent;
+      box-shadow: none;
     }
 
+    /* Botón Peligro/Eliminar */
     button.danger {
-      background-color: var(--danger-color);
+      background-color: transparent;
+      color: var(--danger);
+      box-shadow: none;
     }
     button.danger:hover {
-      background-color: var(--danger-hover);
+      background-color: var(--danger-light);
+      transform: none;
+      box-shadow: none;
     }
 
-    /* --- TABLA DE PRODUCTOS --- */
+    /* --- TABLA LIMPIA Y MODERNA --- */
     .table-container {
-      overflow-x: auto; /* Permite scroll horizontal en móviles si la tabla es grande */
+      overflow-x: auto;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 8px;
       text-align: left;
-    }
-
-    th, td {
-      padding: 12px 16px;
-      border-bottom: 1px solid var(--border-color);
+      font-size: 0.95rem;
     }
 
     th {
-      background-color: #f1f5f9;
-      color: #475569;
+      background-color: #f8fafc;
+      color: var(--text-muted);
       font-weight: 600;
       text-transform: uppercase;
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       letter-spacing: 0.05em;
+      padding: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    td {
+      padding: 18px 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
     }
 
     tr:hover {
-      background-color: #f8fafc; /* Efecto hover en las filas de la tabla */
+      background-color: #f8fafc;
     }
 
-    /* --- FORMULARIO GRID CONTROLES --- */
+    /* --- CONTROLES DE FORMULARIO E-COMMERCE --- */
     .form-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      grid-template-columns: 1fr;
+      gap: 20px;
     }
 
-    /* Elemento que ocupa todo el ancho del formulario (Descripción) */
-    .full-width {
-      grid-column: 1 / -1;
+    @media (min-width: 640px) {
+      .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .full-width { grid-column: span 2; }
     }
 
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      gap: 8px;
     }
 
     label {
       font-weight: 600;
-      font-size: 0.9rem;
-      color: #475569;
+      font-size: 0.85rem;
+      color: var(--text-main);
     }
 
     input, textarea {
       width: 100%;
-      padding: 10px 12px;
+      padding: 14px 18px;
       font-size: 0.95rem;
-      border-radius: 6px;
+      font-family: inherit;
+      border-radius: var(--radius-md);
       border: 1px solid var(--border-color);
-      background-color: #fff;
-      box-sizing: border-box;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      background-color: #f8fafc; /* Fondo gris sutil para inputs */
+      transition: var(--transition);
     }
 
     input:focus, textarea:focus {
       outline: none;
-      border-color: var(--primary-color);
-      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); /* Efecto focus moderno */
+      border-color: var(--primary);
+      background-color: #ffffff;
+      box-shadow: 0 0 0 4px var(--primary-light);
     }
 
-    /* --- ESTADOS DE NOTIFICACIÓN --- */
+    /* --- FEEDBACK NOTIFICACIÓN --- */
     .status {
-      margin-top: 14px;
-      font-size: 0.95rem;
+      margin-top: 20px;
+      font-size: 0.9rem;
       font-weight: 500;
-      padding: 10px;
-      border-radius: 6px;
-      display: none; /* Se oculta por defecto */
+      padding: 14px 20px;
+      border-radius: var(--radius-md);
+      display: none;
     }
 
     .status.ok {
-      display: block;
-      color: #15803d;
-      background-color: #f0fdf4;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--success);
+      background-color: var(--success-light);
       border: 1px solid #bbf7d0;
-    }
-
-    .status.error {
-      display: block;
-      color: #b91c1c;
-      background-color: #fef2f2;
-      border: 1px solid #fca5a5;
     }
   </style>
 </head>
@@ -222,15 +289,21 @@
 
   <header>
     <h1>Tienda de Alimentos para Perritos 🐶</h1>
-    <p>Gestión CRUD de productos en contenedores Docker (Frontend + Backend + MySQL)</p>
+    <p>Panel de Administración adaptado a microservicios con <code>Docker</code></p>
   </header>
 
   <main>
-    
     <section>
-      <h2>Productos en Inventario</h2>
-      <div class="actions">
-        <button id="btnCargar">🔄 Cargar Productos</button>
+      <h2>
+        <svg width="22" height="22" fill="none" stroke="var(--primary)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+        Inventario de Productos
+      </h2>
+      
+      <div class="btn-group">
+        <button id="btnCargar">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H17"></path></svg>
+          Sincronizar Stock
+        </button>
       </div>
       
       <div class="table-container">
@@ -242,7 +315,7 @@
               <th>Descripción</th>
               <th>Precio</th>
               <th>Stock</th>
-              <th>Acciones</th>
+              <th style="text-align: right;">Acciones</th>
             </tr>
           </thead>
           <tbody id="tbodyProductos">
@@ -252,34 +325,43 @@
     </section>
 
     <section>
-      <h2 id="formTitle">Nuevo Producto</h2>
+      <h2 id="formTitle">
+        <svg width="22" height="22" fill="none" stroke="var(--primary)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span>Nuevo Producto</span>
+      </h2>
       
-      <div class="form-grid">
-        <div class="form-group">
-          <label for="nombre">Nombre del Producto</label>
-          <input type="text" id="nombre" placeholder="Ej: Alimento Premium Cachorro" />
-        </div>
+      <form id="productForm" onsubmit="return false;">
+        <input type="hidden" id="productoId" />
         
-        <div class="form-group">
-          <label for="precio">Precio ($)</label>
-          <input type="number" id="precio" step="0.01" min="0" placeholder="Ej: 19990" />
-        </div>
-        
-        <div class="form-group">
-          <label for="stock">Stock Disponible</label>
-          <input type="number" id="stock" min="0" placeholder="Ej: 10" />
-        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="nombre">Nombre del Producto</label>
+            <input type="text" id="nombre" placeholder="Ej: Alimento Cachorro Pro" required />
+          </div>
+          
+          <div class="form-group">
+            <label for="precio">Precio ($)</label>
+            <input type="number" id="precio" step="0.01" min="0" placeholder="Ej: 14990" required />
+          </div>
+          
+          <div class="form-group full-width">
+            <label for="stock">Stock Disponible</label>
+            <input type="number" id="stock" min="0" placeholder="Ej: 24" required />
+          </div>
 
-        <div class="form-group full-width">
-          <label for="descripcion">Descripción</label>
-          <textarea id="descripcion" rows="3" placeholder="Ej: Sabor pollo, rico en proteínas, ideal para razas pequeñas..."></textarea>
+          <div class="form-group full-width">
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" rows="3" placeholder="Sabor, ingredientes, edad recomendada..."></textarea>
+          </div>
         </div>
-      </div>
-      
-      <div class="actions" style="margin-top: 20px;">
-        <button id="btnGuardar">💾 Guardar Producto</button>
-        <button id="btnCancelar" class="secondary">Cancelar</button>
-      </div>
+        
+        <div class="btn-group" style="margin-top: 28px;">
+          <button id="btnGuardar" type="submit">
+            Guardar Producto
+          </button>
+          <button id="btnCancelar" type="button" class="secondary">Cancelar</button>
+        </div>
+      </form>
       
       <div id="status" class="status"></div>
     </section>

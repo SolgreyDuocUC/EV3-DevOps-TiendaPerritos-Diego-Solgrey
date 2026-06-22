@@ -1,0 +1,188 @@
+INSTRUCCIONES DE LEVANTAMIENTO Y PRUEBA LOCAL
+Tienda Perritos - EV3 DevOps
+===============================================================
+
+
+REQUISITOS PREVIOS
+------------------
+- Docker Desktop instalado y en ejecucion (version 24.x o superior)
+- Docker Compose v2 incluido con Docker Desktop
+- Git instalado
+- Puerto 8080 disponible (frontend)
+- Puerto 3001 disponible (backend)
+- Puerto 3306 disponible (base de datos)
+
+
+PASO 1 - CLONAR EL REPOSITORIO
+-------------------------------
+Abrir una terminal (PowerShell o CMD) y ejecutar:
+
+    git clone https://github.com/<usuario>/EV3-DevOps-TiendaPerritos-Diego-Solgrey.git
+    cd EV3-DevOps-TiendaPerritos-Diego-Solgrey
+
+Si ya se cuenta con el repositorio clonado, omitir este paso y
+posicionarse en la carpeta raiz del proyecto.
+
+
+PASO 2 - CONSTRUIR Y LEVANTAR LOS SERVICIOS
+--------------------------------------------
+Desde la carpeta raiz del proyecto, ejecutar:
+
+    docker compose up --build
+
+Este comando realiza las siguientes acciones en orden:
+  1. Construye la imagen de MySQL con el schema y datos de prueba precargados.
+  2. Construye la imagen del backend Node.js con sus dependencias.
+  3. Construye la imagen del frontend servido por Nginx.
+  4. Levanta los tres contenedores en una red interna compartida.
+  5. Espera a que MySQL este listo antes de iniciar el backend.
+
+La primera vez puede tardar entre 2 y 5 minutos segun la velocidad
+de descarga de las imagenes base.
+
+Para levantar en segundo plano (sin ver logs en tiempo real):
+
+    docker compose up --build -d
+
+
+PASO 3 - VERIFICAR QUE LOS SERVICIOS ESTAN ACTIVOS
+----------------------------------------------------
+Ejecutar:
+
+    docker compose ps
+
+Salida esperada:
+
+    NAME               STATUS          PORTS
+    tienda-db          Up (healthy)    0.0.0.0:3306->3306/tcp
+    tienda-backend     Up              0.0.0.0:3001->3001/tcp
+    tienda-frontend    Up              0.0.0.0:8080->80/tcp
+
+El servicio "tienda-db" debe aparecer como "(healthy)" antes de
+que el backend comience a aceptar conexiones.
+
+
+PASO 4 - ACCEDER A LA APLICACION
+---------------------------------
+Una vez que los tres servicios esten activos, abrir un navegador
+y acceder a:
+
+    Frontend (interfaz web):    http://localhost:8080
+    API - Listar productos:     http://localhost:3001/api/productos
+    API - Health check:         http://localhost:3001/api/health
+
+
+PASO 5 - PRUEBAS DE LA API (via terminal)
+-----------------------------------------
+Se pueden realizar las siguientes pruebas usando curl o PowerShell.
+
+  Verificar estado del servicio:
+    curl http://localhost:3001/api/health
+
+  Listar todos los productos:
+    curl http://localhost:3001/api/productos
+
+  Obtener un producto por ID:
+    curl http://localhost:3001/api/productos/1
+
+  Crear un nuevo producto:
+    curl -X POST http://localhost:3001/api/productos ^
+      -H "Content-Type: application/json" ^
+      -d "{\"nombre\":\"Croquetas Royale\",\"descripcion\":\"Premium adulto\",\"precio\":22990,\"stock\":25}"
+
+  Actualizar un producto:
+    curl -X PUT http://localhost:3001/api/productos/1 ^
+      -H "Content-Type: application/json" ^
+      -d "{\"nombre\":\"Alimento Cachorro Premium\",\"descripcion\":\"Actualizado\",\"precio\":20990,\"stock\":10}"
+
+  Eliminar un producto:
+    curl -X DELETE http://localhost:3001/api/productos/1
+
+Nota: en PowerShell reemplazar ^ por ` (backtick) para continuar
+lineas largas.
+
+
+PASO 6 - DIAGNOSTICO Y LOGS
+----------------------------
+  Ver logs de todos los servicios en tiempo real:
+    docker compose logs -f
+
+  Ver logs solo del backend:
+    docker compose logs -f backend
+
+  Ver logs solo de la base de datos:
+    docker compose logs -f db
+
+  Ver logs solo del frontend:
+    docker compose logs -f frontend
+
+  Acceder al shell del contenedor del backend:
+    docker compose exec backend sh
+
+  Conectarse a MySQL dentro del contenedor:
+    docker compose exec db mysql -uroot -padmin123 tienda_perritos
+
+  Verificar tablas y datos iniciales en MySQL:
+    SHOW TABLES;
+    SELECT * FROM productos;
+    EXIT;
+
+
+PASO 7 - DETENER EL ENTORNO
+----------------------------
+  Detener contenedores sin eliminar el volumen de datos:
+    docker compose down
+
+  Detener y eliminar contenedores mas el volumen de MySQL:
+    docker compose down -v
+
+  Reconstruir solo un servicio especifico:
+    docker compose build backend
+    docker compose up -d --no-deps backend
+
+
+PUERTOS Y SERVICIOS RESUMIDOS
+------------------------------
+  http://localhost:8080       -> Interfaz web (Frontend Nginx)
+  http://localhost:3001       -> API REST (Backend Node.js)
+  localhost:3306              -> Base de datos MySQL (acceso interno)
+
+
+VARIABLES DE ENTORNO CONFIGURADAS EN DOCKER COMPOSE
+-----------------------------------------------------
+  DB_HOST      = db           (nombre del servicio en la red interna)
+  DB_USER      = root
+  DB_PASSWORD  = admin123
+  DB_NAME      = tienda_perritos
+  DB_PORT      = 3306
+  PORT         = 3001         (puerto del backend)
+
+
+DATOS DE PRUEBA PRECARGADOS
+----------------------------
+Al levantar el entorno por primera vez se cargan automaticamente
+los siguientes productos de ejemplo:
+
+  1. Alimento Cachorro Premium  - $19.990 - Stock: 15
+  2. Alimento Adulto Light      - $17.990 - Stock: 8
+  3. Snacks Dentales            - $5.990  - Stock: 30
+  4. Alimento Adulto Pedigree   - $15.990 - Stock: 40
+  5. Bravery Pollo Adulto       - $25.990 - Stock: 20
+
+
+PROBLEMAS COMUNES
+-----------------
+  El backend no conecta con la base de datos:
+    Esperar que "tienda-db" aparezca como "(healthy)" en
+    "docker compose ps". El healthcheck puede tardar hasta 30 segundos.
+
+  El puerto 8080 o 3001 ya esta en uso:
+    Detener el proceso que ocupa ese puerto o modificar los puertos
+    en el archivo docker-compose.yml antes de levantar.
+
+  Cambios en el codigo no se reflejan:
+    Ejecutar "docker compose up --build" para reconstruir las imagenes.
+
+  Error de permisos en Docker:
+    Asegurarse de que Docker Desktop este en ejecucion y que el
+    usuario tenga permisos de administrador.
