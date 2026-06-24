@@ -1,10 +1,12 @@
 name: CI/CD Tienda Perritos - ECS Fargate
 
+# Disparadores: push a main o ejecucion manual desde GitHub
 on:
   push:
     branches: [ main ]
   workflow_dispatch: {}
 
+# Variables globales (Nombres de tus repositorios ECR y tu clúster en AWS)
 env:
   ECR_REPO_FRONTEND: tienda-perritos-frontend
   ECR_REPO_BACKEND:  tienda-perritos-backend
@@ -13,9 +15,14 @@ env:
 
 jobs:
 
+  # ============================================================
+  # JOB 1: Construir y publicar imagenes en Amazon ECR
+  # ============================================================
   build:
     name: Build y Push a ECR
     runs-on: ubuntu-latest
+    # Enlaza este trabajo con las credenciales de tu Environment en GitHub
+    environment: AWS_cluster  
 
     outputs:
       image_tag:    ${{ steps.set-tag.outputs.image_tag }}
@@ -44,6 +51,7 @@ jobs:
           echo "IMAGE_TAG=${TAG}" >> $GITHUB_ENV
           echo "image_tag=${TAG}" >> $GITHUB_OUTPUT
 
+      # ---------- BASE DE DATOS ----------
       - name: Build y push DB
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -54,6 +62,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPO_DB:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPO_DB:latest
 
+      # ---------- BACKEND ----------
       - name: Build y push BACKEND
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -64,6 +73,7 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPO_BACKEND:latest
 
+      # ---------- FRONTEND ----------
       - name: Build y push FRONTEND
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -74,10 +84,15 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPO_FRONTEND:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPO_FRONTEND:latest
 
+  # ============================================================
+  # JOB 2: Actualizar y Desplegar en Amazon ECS (Fargate)
+  # ============================================================
   deploy:
     name: Despliegue en AWS ECS
     runs-on: ubuntu-latest
     needs: build
+    # Enlaza este trabajo con las credenciales de tu Environment en GitHub
+    environment: AWS_cluster  
 
     steps:
       - name: Checkout del repositorio
@@ -91,6 +106,7 @@ jobs:
           aws-region:            us-east-1
           aws-session-token:     ${{ secrets.AWS_SESSION_TOKEN }}
 
+      # ---------- Refrescar Base de Datos ----------
       - name: Forzar despliegue DB
         run: |
           aws ecs update-service \
@@ -98,6 +114,7 @@ jobs:
             --service td-tienda-perritos-db-service-n8p6e87s \
             --force-new-deployment
 
+      # ---------- Refrescar Backend ----------
       - name: Forzar despliegue BACKEND
         run: |
           aws ecs update-service \
@@ -105,6 +122,7 @@ jobs:
             --service service-tienda-perritos-backend \
             --force-new-deployment
 
+      # ---------- Refrescar Frontend ----------
       - name: Forzar despliegue FRONTEND
         run: |
           aws ecs update-service \
